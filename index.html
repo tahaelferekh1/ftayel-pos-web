@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fatayel & More POS</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="brand-row">
+          <div class="brand">ftayel POS</div>
+          <div class="lang-toggle" role="group" aria-label="Language selector">
+            <button id="langArBtn" type="button" class="lang-btn">AR</button>
+            <button id="langEnBtn" type="button" class="lang-btn active">EN</button>
+          </div>
+          <div class="currency-toggle" role="group" aria-label="Currency selector">
+            <button id="currLbpBtn" type="button" class="currency-btn lb active" aria-label="Switch to Lebanese Pound">
+              <span class="flag" aria-hidden="true">🇱🇧</span>
+              <span class="label">LB</span>
+            </button>
+            <button id="currUsdBtn" type="button" class="currency-btn us" aria-label="Switch to US Dollar">
+              <span class="flag" aria-hidden="true">🇺🇸</span>
+              <span class="label">US</span>
+            </button>
+          </div>
+        </div>
+        <div class="subtitle">Fatayel & More - Point of Sale</div>
+      </div>
+      <div class="inline-row" style="margin:0;">
+        <div class="user-badge">Logged in as: <span id="currentRole">Guest</span></div>
+        <button id="logoutBtn" class="danger" type="button" style="display:none; min-height:42px; padding:10px 14px;">Logout</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <button class="navBtn active" data-view="pos">POS Terminal</button>
+        <button class="navBtn" data-view="kitchen">Kitchen Queue</button>
+        <button class="navBtn" data-view="onlineOrders">Online Orders</button>
+        <button class="navBtn" data-view="menu">Menu Manager</button>
+        <button class="navBtn" data-view="inventory">Inventory</button>
+       
+        <button class="navBtn" data-view="users">Users</button>
+        <button class="navBtn" data-view="shift">Shift Close</button>
+        <button class="navBtn" data-view="customers">Customers</button>
+        <button class="navBtn" data-view="reports">Reports</button>
+         <button class="navBtn" data-view="settings">Settings</button>
+      </aside>
+
+      <section class="content">
+        <div class="panel" id="loginPanel">
+          <h2>Sign In</h2>
+          <p style="color:#aaa;">Enter your credentials to access your dashboard.</p>
+          <form id="loginForm" style="display:flex; flex-direction:column; gap:12px; max-width:340px; margin-top:16px;">
+            <input id="loginUsername" placeholder="Username" autocomplete="username" required />
+            <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required />
+            <button class="primary" type="submit" style="width:100%;">Sign In</button>
+          </form>
+          <div id="loginMsg" class="text-muted">Demo accounts: admin/admin (admin), manager/manager (manager), cashier/cashier (cashier).</div>
+          <div class="card" style="margin-top:10px;background:#101d41;">
+            <h4>How to use</h4>
+            <ul style="margin:0 0 0 15px; padding-left:0; color:#d4e0ff;">
+              <li>Step 1: Login with username/password.</li>
+              <li>Step 2: Cashiers use POS; managers also use reports and management tabs.</li>
+              <li>Step 3: Create orders, click Pay, then print receipt.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="panel view" id="pos">
+          <div class="flex-between"><h2>POS Terminal</h2></div>
+
+          <div class="split">
+            <div>
+              <div id="categoryFilters" style="display:none;"></div>
+              <h3 style="margin-top:10px;">Menu Items</h3>
+              <div id="menuItems" class="card-grid"></div>
+            </div>
+            <div>
+              <h3>Current Order</h3>
+              <div id="orderItems"></div>
+              <div class="order-summary">
+                <div>Subtotal: <span id="subtotal">$0.00</span></div>
+                <div>Discount: <span id="discount">$0.00</span></div>
+                <div>Service: <span id="service">$0.00</span></div>
+                <div id="taxLabel">Tax (8% excl): <span id="tax">$0.00</span></div>
+                <div class="total">Total: <span id="total">$0.00</span></div>
+              </div>
+              <div class="inline-row" style="margin-top:8px;">
+                <button id="payOrder" class="primary" style="flex:1; font-size:1.1rem; padding:12px 0;">Pay</button>
+                <button id="printReceipt" class="primary" style="flex:1; font-size:1.1rem; padding:12px 0;">Print Receipt</button>
+                <button id="printKitchen" class="primary" style="flex:1; font-size:1.1rem; padding:12px 0;">Print Kitchen</button>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>Receipt Preview</h4>
+                <pre id="receiptPreview" style="white-space:pre-wrap; background:#0b1d4b; border-radius:8px; border:1px dashed #4f6fd4; padding:8px; min-height:120px; margin-top:6px;">No receipt yet.</pre>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>Billing Controls</h4>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="flex:1; min-width:130px;">Discount Type
+                    <select id="discountType">
+                      <option value="none">None</option>
+                      <option value="percent">Percent</option>
+                      <option value="fixed">Fixed</option>
+                    </select>
+                  </label>
+                  <label style="flex:1; min-width:130px;">Discount Value
+                    <input id="discountValue" type="number" min="0" step="0.01" value="0" />
+                  </label>
+                </div>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="flex:1; min-width:130px;">Service %
+                    <input id="serviceChargePct" type="number" min="0" step="0.1" value="0" />
+                  </label>
+                  <label style="flex:1; min-width:130px;">Tax Mode
+                    <select id="taxMode">
+                      <option value="exclusive">Tax Exclusive</option>
+                      <option value="inclusive">Tax Inclusive</option>
+                    </select>
+                  </label>
+                  <label style="flex:1; min-width:130px;">Payment
+                    <select id="paymentMethod">
+                      <option value="cash">Cash</option>
+                      <option value="card">Card</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>Order Type</h4>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="radio" name="orderType" id="orderTypeDineIn" value="dine-in" checked style="width:auto;margin:0;" /> Dine-in
+                  </label>
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="radio" name="orderType" id="orderTypeDelivery" value="delivery" style="width:auto;margin:0;" /> Delivery
+                  </label>
+                </div>
+                <div id="deliveryFields" class="hidden" style="margin-top:10px;display:grid;gap:8px;">
+                  <label>Loyalty ID / Link
+                    <input id="deliveryCustomerRef" placeholder="Paste customer ID or loyalty link" />
+                  </label>
+                  <label>Customer Name
+                    <input id="deliveryName" placeholder="Full name" />
+                  </label>
+                  <label>Phone
+                    <input id="deliveryPhone" type="tel" placeholder="e.g. 05X-XXXXXXX" />
+                  </label>
+                  <label>Address
+                    <input id="deliveryAddress" placeholder="Street, building, area" />
+                  </label>
+                  <label>Delivery Note
+                    <input id="deliveryNote" placeholder="e.g. ring the bell, 3rd floor" />
+                  </label>
+                  <div id="customerLookupMsg" style="font-size:0.85rem; margin-top:4px; color:#f5c400;"></div>
+                  <div id="customerLoyaltyLink" style="font-size:0.8rem; color:#a8b3c7;"></div>
+                </div>
+              </div>
+              <div class="inline-row">
+                <button id="holdOrderBtn" class="primary" style="background:#2979ff;">Hold Order</button>
+                <button id="clearOrder" class="danger">Clear Order</button>
+              </div>
+              <div class="card" id="cashChangeCard" style="margin-top:8px; display:none;">
+                <h4>&#128181; Cash Calculator</h4>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="flex:1; min-width:130px;">Cash Received
+                    <input id="cashReceived" type="number" min="0" step="1" placeholder="Enter amount" />
+                  </label>
+                  <div style="flex:1; min-width:130px; padding-top:24px;">
+                    <div style="font-size:1.1rem; font-weight:800; color:#f5c400;">Change: <span id="changeDue">-</span></div>
+                  </div>
+                </div>
+              </div>
+              <div id="heldOrdersWrap" style="display:none; margin-top:8px;">
+                <div class="card">
+                  <h4>&#9209;&#65039; Held Orders</h4>
+                  <div id="heldOrdersList" style="margin-top:8px; display:grid; gap:8px;"></div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>Order Return / Refund</h4>
+                <div class="inline-row" style="margin:0;">
+                  <input id="refundOrderId" placeholder="Order # (leave empty for last order)" style="flex:1; min-width:180px;" />
+                  <button id="refundOrderBtn" class="danger" type="button">Refund Order</button>
+                  <button id="partialRefundBtn" class="primary" type="button" style="background:#7b1fa2;">Partial Refund</button>
+                </div>
+                <div id="partialRefundPanel" class="hidden" style="margin-top:10px; padding:10px; border:1px dashed #4f6fd4; border-radius:8px; background:#0b1d4b;">
+                  <div class="inline-row" style="margin:0;">
+                    <label style="flex:1; min-width:180px;">Item
+                      <select id="partialRefundItemSelect"></select>
+                    </label>
+                    <label style="flex:1; min-width:120px;">Qty
+                      <select id="partialRefundQtySelect"></select>
+                    </label>
+                  </div>
+                  <div class="inline-row" style="margin-top:8px;">
+                    <button id="confirmPartialRefundBtn" class="danger" type="button">Confirm Partial Refund</button>
+                    <button id="cancelPartialRefundBtn" class="primary" type="button" style="background:#455a64;">Cancel</button>
+                  </div>
+                  <div id="partialRefundHint" class="text-muted" style="margin-top:6px;">Select item and quantity to refund.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="kitchen">
+          <h2>Kitchen Queue</h2>
+          <div id="kitchenList"></div>
+        </div>
+
+        <div class="panel view hidden" id="onlineOrders">
+          <h2>Online Orders</h2>
+          <div class="card" style="margin-bottom:10px;">
+            <h3>Website Integration</h3>
+            <label>Website Orders API Endpoint
+              <input id="onlineEndpoint" placeholder="https://your-site.com/api/orders" />
+            </label>
+            <label>API Bearer Token (Optional)
+              <input id="onlineToken" type="password" placeholder="Paste token if your endpoint is protected" />
+            </label>
+            <div class="inline-row">
+              <button id="saveOnlineSettingsBtn" class="primary" type="button">Save Settings</button>
+              <button id="syncOnlineOrdersBtn" class="primary" type="button">Sync Orders</button>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:10px;">
+            <h3>Manual JSON Import</h3>
+            <label>Paste order JSON from website webhook / API
+              <textarea id="onlineOrdersJson" rows="6" placeholder='{"orders":[{"id":"W1001","paymentType":"online_card","customer":{"name":"Sara","phone":"0500000000","address":"City"},"items":[{"name":"Club Sandwich","qty":2,"price":8.5}]}]}'></textarea>
+            </label>
+            <div class="inline-row">
+              <button id="importOnlineOrdersBtn" class="primary" type="button">Import JSON</button>
+            </div>
+            <div id="onlineOrdersStatus" class="text-muted">No online sync yet.</div>
+          </div>
+          <div id="onlineOrdersList"></div>
+        </div>
+
+        <div class="panel view hidden" id="menu">
+          <h2>Menu Manager</h2>
+          <div class="split">
+            <div>
+              <div class="card">
+                <h3>Add Menu Item</h3>
+                <div>
+                  <label>Item Name<input id="newItemName" /></label>
+                  <label>Price<input id="newItemPrice" type="number" min="0" step="0.01" /></label>
+                  <select id="newItemCategory" style="display:none;"></select>
+                  <button id="addItemBtn" class="primary" type="button" style="margin-top:10px;">Add Item</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3>Existing Items</h3>
+              <div id="menuList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="inventory">
+          <h2>Inventory & Alerts</h2>
+          <div class="split">
+          <div id="invFormWrap" class="card">
+              <h3>Add Inventory Item</h3>
+                <label>Item Name<input id="invName" /></label>
+                <label>Quantity<input id="invQty" type="number" min="0" /></label>
+                <label>Alert Threshold<input id="invAlert" type="number" min="0" /></label>
+                <button id="addInvBtn" class="primary" type="button" style="margin-top:10px;">Add Inventory</button>
+                <button id="importInventoryBtn" class="primary" type="button" style="margin-top:10px;">Upload Excel / CSV</button>
+                    <button id="downloadInventoryTemplateBtn" class="primary" type="button" style="margin-top:10px;">Download Template</button>
+                <input id="inventoryFileInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+          </div>
+            <div>
+              <h3>Inventory List</h3>
+              <div id="inventoryList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="users">
+          <h2>User Management</h2>
+          <div class="inline-row">
+            <input id="username" placeholder="User name" style="flex:1;" />
+            <input id="userPassword" type="password" placeholder="Password" style="flex:1;" />
+            <select id="roleSelect">
+              <option value="cashier">Cashier</option>
+              <option value="manager">Manager</option>
+              <option value="admin">Admin</option>
+            </select>
+            <button id="addUserBtn" class="primary" type="button">Add User</button>
+          </div>
+          <div id="userList"></div>
+        </div>
+
+        <div class="panel view hidden" id="settings">
+          <h2>Settings</h2>
+
+          <div class="card" id="pwaInstallCard" style="margin-bottom:12px;">
+            <h3>📥 Install on Desktop</h3>
+            <p class="text-muted">Install this app on your device so it opens without a browser — works like a native app!</p>
+            <button id="pwaInstallBtn" class="primary" type="button" style="font-size:1.05rem; padding:10px 24px;">📥 Install on Desktop</button>
+            <p id="pwaInstallHint" class="text-muted" style="margin-top:8px; font-size:0.85rem;">If the button doesn't work, use Chrome or Edge and click the install icon ⤵️ in the address bar</p>
+          </div>
+
+          <div class="card">
+            <h3>App Data</h3>
+            <p class="text-muted">Reset app data is available only for the manager role.</p>
+            <button id="settingsResetBtn" type="button" class="danger">Reset App Data</button>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="customers">
+          <h2>Customers &amp; Loyalty</h2>
+          <div class="card" style="margin-bottom:10px;">
+            <div class="inline-row" style="margin:0;">
+              <input id="customerSearch" placeholder="Search by name or phone..." style="flex:1;" />
+            </div>
+          </div>
+          <div id="customerList"></div>
+        </div>
+
+        <div class="panel view hidden" id="shift">
+          <h2>Shift Open / Close</h2>
+          <div class="card">
+            <h3>Current Shift</h3>
+            <div id="shiftStatus" class="text-muted">No active shift.</div>
+            <div class="inline-row">
+              <label style="flex:1; min-width:140px;">Starting Cash
+                <input id="shiftStartCash" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <button id="openShiftBtn" class="primary" type="button">Open Shift</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>Close Shift</h3>
+            <div class="inline-row">
+              <label style="flex:1; min-width:140px;">Actual Cash in Drawer
+                <input id="closeActualCash" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <label style="flex:1; min-width:140px;">Actual Card Total
+                <input id="closeCardTotal" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <button id="closeShiftBtn" class="danger" type="button">Close Shift</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>Shift History</h3>
+            <div id="shiftHistory"></div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="reports">
+          <h2>Daily & Monthly Reports</h2>
+          <div class="row">
+            <div class="card summary">
+              <h3>Today's Summary</h3>
+              <div>Transactions: <span id="transCount">0</span></div>
+              <div>Total Revenue: <span id="revToday">$0.00</span></div>
+            </div>
+            <div class="card summary">
+              <h3>This Month</h3>
+              <div>Orders: <span id="monthCount">0</span></div>
+              <div>Revenue: <span id="revMonth">$0.00</span></div>
+              <div>Best Seller: <span id="bestSellerMonth">-</span></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h4>Filter Reports</h4>
+            <div class="inline-row" style="margin-top:6px;">
+              <label style="flex:1; min-width:160px;">Day
+                <input id="reportDay" type="date" />
+              </label>
+              <label style="flex:1; min-width:160px;">Month
+                <input id="reportMonth" type="month" />
+              </label>
+            </div>
+          </div>
+          <div class="inline-row">
+            <button id="exportDaily" class="primary">Export Daily CSV</button>
+            <button id="printDailyReceipt" class="primary">Print Daily Receipt</button>
+            <button id="exportMonthly" class="primary">Export Monthly CSV</button>
+            <button id="exportBackup" class="primary" type="button">Backup JSON</button>
+            <button id="importBackup" class="primary" type="button">Restore JSON</button>
+            <input id="backupFileInput" type="file" accept="application/json" class="hidden" />
+          </div>
+          <div id="reportNote" class="text-muted">Manager-only access enforced.</div>
+          <div class="card" style="margin-top:10px;">
+            <h3>Daily Breakdown</h3>
+            <div id="dailyBreakdown"></div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>Monthly Breakdown</h3>
+            <div id="monthlyBreakdown"></div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>Refund History</h3>
+            <div id="refundHistoryList"></div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>Audit Log</h3>
+            <div id="auditList"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

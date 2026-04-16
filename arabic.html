@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fatayel & More POS</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <div class="brand-row">
+          <div class="brand">Ftayel POS</div>
+          <div class="lang-toggle" role="group" aria-label="Language selector">
+            <button id="langArBtn" type="button" class="lang-btn active">AR</button>
+            <button id="langEnBtn" type="button" class="lang-btn">EN</button>
+          </div>
+          <div class="currency-toggle" role="group" aria-label="Currency selector">
+            <button id="currLbpBtn" type="button" class="currency-btn lb active" aria-label="Switch to Lebanese Pound">
+              <span class="flag" aria-hidden="true">🇱🇧</span>
+              <span class="label">LB</span>
+            </button>
+            <button id="currUsdBtn" type="button" class="currency-btn us" aria-label="Switch to US Dollar">
+              <span class="flag" aria-hidden="true">🇺🇸</span>
+              <span class="label">US</span>
+            </button>
+          </div>
+        </div>
+        <div class="subtitle">فتايل & مور - نقاط البيع</div>
+      </div>
+      <div class="inline-row" style="margin:0;">
+        <div class="user-badge">تم تسجيل الدخول باسم: <span id="currentRole">زائر</span></div>
+        <button id="logoutBtn" class="danger" type="button" style="display:none; min-height:42px; padding:10px 14px;">تسجيل الخروج</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar">
+        <button class="navBtn active" data-view="pos">نقطة البيع</button>
+        <button class="navBtn" data-view="kitchen">طابور المطبخ</button>
+        <button class="navBtn" data-view="onlineOrders">الطلبات الإلكترونية</button>
+        <button class="navBtn" data-view="menu">إدارة المنيو</button>
+        <button class="navBtn" data-view="inventory">المخزون</button>
+        <button class="navBtn" data-view="users">المستخدمون</button>
+        <button class="navBtn" data-view="shift">إغلاق الوردية</button>
+        <button class="navBtn" data-view="customers">العملاء</button>
+        <button class="navBtn" data-view="reports">التقارير</button>
+        <button class="navBtn" data-view="settings">الإعدادات</button>
+      </aside>
+
+      <section class="content">
+        <div class="panel" id="loginPanel">
+          <h2>تسجيل الدخول</h2>
+          <p style="color:#aaa;">أدخل بياناتك للوصول إلى لوحة التحكم.</p>
+          <form id="loginForm" style="display:flex; flex-direction:column; gap:12px; max-width:340px; margin-top:16px;">
+            <input id="loginUsername" placeholder="اسم المستخدم" autocomplete="username" required />
+            <input id="loginPassword" type="password" placeholder="كلمة المرور" autocomplete="current-password" required />
+            <button class="primary" type="submit" style="width:100%;">دخول</button>
+          </form>
+          <div id="loginMsg" class="text-muted">الحسابات التجريبية: admin/admin (أدمن)، manager/manager (مدير)، cashier/cashier (كاشير).</div>
+        </div>
+
+        <div class="panel view" id="pos">
+          <div class="flex-between"><h2>نقطة البيع</h2></div>
+
+          <div class="split">
+            <div>
+              <div id="categoryFilters" style="display:none;"></div>
+              <h3 style="margin-top:10px;">أصناف المنيو</h3>
+              <div id="menuItems" class="card-grid"></div>
+            </div>
+            <div>
+              <h3>الطلب الحالي</h3>
+              <div id="orderItems"></div>
+              <div class="order-summary">
+                <div>الإجمالي الفرعي: <span id="subtotal">$0.00</span></div>
+                <div>الخصم: <span id="discount">$0.00</span></div>
+                <div>الخدمة: <span id="service">$0.00</span></div>
+                <div id="taxLabel">الضريبة: <span id="tax">$0.00</span></div>
+                <div class="total">الإجمالي: <span id="total">$0.00</span></div>
+              </div>
+              <div class="inline-row" style="margin-top:8px;">
+                <button id="payOrder" class="primary" style="flex:1; font-size:1.1rem; padding:12px 0;">دفع</button>
+                <button id="printReceipt" class="primary" style="flex:1; font-size:1.1rem; padding:12px 0;">طباعة الفاتورة</button>
+                <button id="printKitchen" class="primary" style="flex:1; font-size:1.1rem; padding:12px 0;">طباعة المطبخ</button>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>معاينة الفاتورة</h4>
+                <pre id="receiptPreview" style="white-space:pre-wrap; background:#0b1d4b; border-radius:8px; border:1px dashed #4f6fd4; padding:8px; min-height:120px; margin-top:6px;">لا توجد فاتورة بعد.</pre>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>إعدادات الفاتورة</h4>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="flex:1; min-width:130px;">نوع الخصم
+                    <select id="discountType">
+                      <option value="none">بدون</option>
+                      <option value="percent">نسبة مئوية</option>
+                      <option value="fixed">قيمة ثابتة</option>
+                    </select>
+                  </label>
+                  <label style="flex:1; min-width:130px;">قيمة الخصم
+                    <input id="discountValue" type="number" min="0" step="0.01" value="0" />
+                  </label>
+                </div>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="flex:1; min-width:130px;">الخدمة %
+                    <input id="serviceChargePct" type="number" min="0" step="0.1" value="0" />
+                  </label>
+                  <label style="flex:1; min-width:130px;">وضع الضريبة
+                    <select id="taxMode">
+                      <option value="exclusive">ضريبة خارج السعر</option>
+                      <option value="inclusive">ضريبة داخل السعر</option>
+                    </select>
+                  </label>
+                  <label style="flex:1; min-width:130px;">الدفع
+                    <select id="paymentMethod">
+                      <option value="cash">نقدي</option>
+                      <option value="card">بطاقة</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>نوع الطلب</h4>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="radio" name="orderType" id="orderTypeDineIn" value="dine-in" checked style="width:auto;margin:0;" /> داخل المطعم
+                  </label>
+                  <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="radio" name="orderType" id="orderTypeDelivery" value="delivery" style="width:auto;margin:0;" /> توصيل
+                  </label>
+                </div>
+                <div id="deliveryFields" class="hidden" style="margin-top:10px;display:grid;gap:8px;">
+                  <label>معرف الولاء / رابط العميل
+                    <input id="deliveryCustomerRef" placeholder="الصق معرف العميل أو رابط الولاء" />
+                  </label>
+                  <label>اسم العميل
+                    <input id="deliveryName" placeholder="الاسم الكامل" />
+                  </label>
+                  <label>الهاتف
+                    <input id="deliveryPhone" type="tel" placeholder="مثال: 05X-XXXXXXX" />
+                  </label>
+                  <label>العنوان
+                    <input id="deliveryAddress" placeholder="الشارع، البناية، المنطقة" />
+                  </label>
+                  <label>ملاحظة التوصيل
+                    <input id="deliveryNote" placeholder="مثال: الدور الثالث - دق الجرس" />
+                  </label>
+                  <div id="customerLookupMsg" style="font-size:0.85rem; margin-top:4px; color:#f5c400;"></div>
+                  <div id="customerLoyaltyLink" style="font-size:0.8rem; color:#a8b3c7;"></div>
+                </div>
+              </div>
+              <div class="inline-row">
+                <button id="holdOrderBtn" class="primary" style="background:#2979ff;">تعليق الطلب</button>
+                <button id="clearOrder" class="danger">مسح الطلب</button>
+              </div>
+              <div class="card" id="cashChangeCard" style="margin-top:8px; display:none;">
+                <h4>&#128181; حاسبة النقد</h4>
+                <div class="inline-row" style="margin-top:6px;">
+                  <label style="flex:1; min-width:130px;">المبلغ المستلم
+                    <input id="cashReceived" type="number" min="0" step="1" placeholder="أدخل المبلغ" />
+                  </label>
+                  <div style="flex:1; min-width:130px; padding-top:24px;">
+                    <div style="font-size:1.1rem; font-weight:800; color:#f5c400;">الباقي: <span id="changeDue">-</span></div>
+                  </div>
+                </div>
+              </div>
+              <div id="heldOrdersWrap" style="display:none; margin-top:8px;">
+                <div class="card">
+                  <h4>&#9209;&#65039; الطلبات المعلقة</h4>
+                  <div id="heldOrdersList" style="margin-top:8px; display:grid; gap:8px;"></div>
+                </div>
+              </div>
+              <div class="card" style="margin-top:8px;">
+                <h4>إرجاع / استرداد الطلب</h4>
+                <div class="inline-row" style="margin:0;">
+                  <input id="refundOrderId" placeholder="رقم الطلب # (اتركه فارغًا لآخر طلب)" style="flex:1; min-width:180px;" />
+                  <button id="refundOrderBtn" class="danger" type="button">استرداد الطلب</button>
+                  <button id="partialRefundBtn" class="primary" type="button" style="background:#7b1fa2;">استرداد جزئي</button>
+                </div>
+                <div id="partialRefundPanel" class="hidden" style="margin-top:10px; padding:10px; border:1px dashed #4f6fd4; border-radius:8px; background:#0b1d4b;">
+                  <div class="inline-row" style="margin:0;">
+                    <label style="flex:1; min-width:180px;">الصنف
+                      <select id="partialRefundItemSelect"></select>
+                    </label>
+                    <label style="flex:1; min-width:120px;">الكمية
+                      <select id="partialRefundQtySelect"></select>
+                    </label>
+                  </div>
+                  <div class="inline-row" style="margin-top:8px;">
+                    <button id="confirmPartialRefundBtn" class="danger" type="button">تأكيد الاسترداد الجزئي</button>
+                    <button id="cancelPartialRefundBtn" class="primary" type="button" style="background:#455a64;">إلغاء</button>
+                  </div>
+                  <div id="partialRefundHint" class="text-muted" style="margin-top:6px;">اختر الصنف والكمية للاسترداد.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="kitchen">
+          <h2>طابور المطبخ</h2>
+          <div id="kitchenList"></div>
+        </div>
+
+        <div class="panel view hidden" id="onlineOrders">
+          <h2>الطلبات الإلكترونية</h2>
+          <div class="card" style="margin-bottom:10px;">
+            <h3>ربط موقع الويب</h3>
+            <label>رابط API الخاص بطلبات الموقع
+              <input id="onlineEndpoint" placeholder="https://your-site.com/api/orders" />
+            </label>
+            <label>توكن API (اختياري)
+              <input id="onlineToken" type="password" placeholder="ألصق التوكن إذا كانت الواجهة محمية" />
+            </label>
+            <div class="inline-row">
+              <button id="saveOnlineSettingsBtn" class="primary" type="button">حفظ الإعدادات</button>
+              <button id="syncOnlineOrdersBtn" class="primary" type="button">مزامنة الطلبات</button>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:10px;">
+            <h3>استيراد JSON يدوي</h3>
+            <label>ألصق JSON القادم من موقع الطلبات
+              <textarea id="onlineOrdersJson" rows="6" placeholder='{"orders":[{"id":"W1001","paymentType":"online_card","customer":{"name":"Sara","phone":"0500000000","address":"City"},"items":[{"name":"Club Sandwich","qty":2,"price":8.5}]}]}'></textarea>
+            </label>
+            <div class="inline-row">
+              <button id="importOnlineOrdersBtn" class="primary" type="button">استيراد JSON</button>
+            </div>
+            <div id="onlineOrdersStatus" class="text-muted">لا توجد مزامنة بعد.</div>
+          </div>
+          <div id="onlineOrdersList"></div>
+        </div>
+
+        <div class="panel view hidden" id="menu">
+          <h2>إدارة المنيو</h2>
+          <div class="split">
+            <div>
+              <div class="card">
+                <h3>إضافة صنف جديد</h3>
+                <div>
+                  <label>اسم الصنف<input id="newItemName" /></label>
+                  <label>السعر<input id="newItemPrice" type="number" min="0" step="0.01" /></label>
+                  <select id="newItemCategory" style="display:none;"></select>
+                  <button id="addItemBtn" class="primary" type="button" style="margin-top:10px;">إضافة صنف</button>
+                </div>
+              </div>
+            </div>
+            <div>
+              <h3>الأصناف الحالية</h3>
+              <div id="menuList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="inventory">
+          <h2>المخزون والتنبيهات</h2>
+          <div class="split">
+            <div id="invFormWrap" class="card">
+              <h3>إضافة عنصر مخزون</h3>
+              <label>اسم العنصر<input id="invName" /></label>
+              <label>الكمية<input id="invQty" type="number" min="0" /></label>
+              <label>حد التنبيه<input id="invAlert" type="number" min="0" /></label>
+              <button id="addInvBtn" class="primary" type="button" style="margin-top:10px;">إضافة للمخزون</button>
+              <button id="importInventoryBtn" class="primary" type="button" style="margin-top:10px;">رفع ملف Excel / CSV</button>
+              <button id="downloadInventoryTemplateBtn" class="primary" type="button" style="margin-top:10px;">تنزيل القالب</button>
+              <input id="inventoryFileInput" type="file" accept=".xlsx,.xls,.csv" class="hidden" />
+            </div>
+            <div>
+              <h3>قائمة المخزون</h3>
+              <div id="inventoryList"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="users">
+          <h2>إدارة المستخدمين</h2>
+          <div class="inline-row">
+            <input id="username" placeholder="اسم المستخدم" style="flex:1;" />
+            <input id="userPassword" type="password" placeholder="كلمة المرور" style="flex:1;" />
+            <select id="roleSelect">
+              <option value="cashier">كاشير</option>
+              <option value="manager">مدير</option>
+              <option value="admin">أدمن</option>
+            </select>
+            <button id="addUserBtn" class="primary" type="button">إضافة مستخدم</button>
+          </div>
+          <div id="userList"></div>
+        </div>
+
+        <div class="panel view hidden" id="settings">
+          <h2>الإعدادات</h2>
+
+          <div class="card" id="pwaInstallCard" style="margin-bottom:12px;">
+            <h3>📥 تثبيت على سطح المكتب</h3>
+            <p class="text-muted">ثبّت التطبيق على جهازك لفتحه بدون متصفح — يشتغل كأنه برنامج عادي!</p>
+            <button id="pwaInstallBtn" class="primary" type="button" style="font-size:1.05rem; padding:10px 24px;">📥 تثبيت على سطح المكتب</button>
+            <p id="pwaInstallHint" class="text-muted" style="margin-top:8px; font-size:0.85rem;">إذا الزر ما اشتغل، استعمل Chrome أو Edge واضغط على أيقونة التثبيت ⤵️ بشريط العنوان</p>
+          </div>
+
+          <div class="card">
+            <h3>بيانات النظام</h3>
+            <p class="text-muted">إعادة ضبط بيانات النظام متاحة فقط لدور المدير.</p>
+            <button id="settingsResetBtn" type="button" class="danger">إعادة ضبط بيانات النظام</button>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="customers">
+          <h2>العملاء والولاء</h2>
+          <div class="card" style="margin-bottom:10px;">
+            <div class="inline-row" style="margin:0;">
+              <input id="customerSearch" placeholder="ابحث بالاسم أو الهاتف..." style="flex:1;" />
+            </div>
+          </div>
+          <div id="customerList"></div>
+        </div>
+
+        <div class="panel view hidden" id="shift">
+          <h2>فتح / إغلاق الوردية</h2>
+          <div class="card">
+            <h3>الوردية الحالية</h3>
+            <div id="shiftStatus" class="text-muted">لا توجد وردية نشطة.</div>
+            <div class="inline-row">
+              <label style="flex:1; min-width:140px;">رصيد البداية
+                <input id="shiftStartCash" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <button id="openShiftBtn" class="primary" type="button">فتح وردية</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>إغلاق الوردية</h3>
+            <div class="inline-row">
+              <label style="flex:1; min-width:140px;">النقد الفعلي في الصندوق
+                <input id="closeActualCash" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <label style="flex:1; min-width:140px;">إجمالي البطاقات الفعلي
+                <input id="closeCardTotal" type="number" min="0" step="0.01" value="0" />
+              </label>
+              <button id="closeShiftBtn" class="danger" type="button">إغلاق الوردية</button>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>سجل الورديات</h3>
+            <div id="shiftHistory"></div>
+          </div>
+        </div>
+
+        <div class="panel view hidden" id="reports">
+          <h2>التقارير اليومية والشهرية</h2>
+          <div class="row">
+            <div class="card summary">
+              <h3>ملخص اليوم</h3>
+              <div>عدد العمليات: <span id="transCount">0</span></div>
+              <div>إجمالي الإيراد: <span id="revToday">$0.00</span></div>
+            </div>
+            <div class="card summary">
+              <h3>ملخص الشهر</h3>
+              <div>عدد الطلبات: <span id="monthCount">0</span></div>
+              <div>الإيراد: <span id="revMonth">$0.00</span></div>
+              <div>الأكثر مبيعًا: <span id="bestSellerMonth">-</span></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h4>تصفية التقارير</h4>
+            <div class="inline-row" style="margin-top:6px;">
+              <label style="flex:1; min-width:160px;">اليوم
+                <input id="reportDay" type="date" />
+              </label>
+              <label style="flex:1; min-width:160px;">الشهر
+                <input id="reportMonth" type="month" />
+              </label>
+            </div>
+          </div>
+          <div class="inline-row">
+            <button id="exportDaily" class="primary">تصدير يومي CSV</button>
+            <button id="printDailyReceipt" class="primary">طباعة تقرير اليوم</button>
+            <button id="exportMonthly" class="primary">تصدير شهري CSV</button>
+            <button id="exportBackup" class="primary" type="button">نسخ احتياطي JSON</button>
+            <button id="importBackup" class="primary" type="button">استعادة JSON</button>
+            <input id="backupFileInput" type="file" accept="application/json" class="hidden" />
+          </div>
+          <div id="reportNote" class="text-muted">الوصول مسموح للمدير/الأدمن فقط.</div>
+          <div class="card" style="margin-top:10px;">
+            <h3>تفاصيل اليوم</h3>
+            <div id="dailyBreakdown"></div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>تفاصيل الشهر</h3>
+            <div id="monthlyBreakdown"></div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>سجل الاسترداد</h3>
+            <div id="refundHistoryList"></div>
+          </div>
+          <div class="card" style="margin-top:10px;">
+            <h3>سجل العمليات</h3>
+            <div id="auditList"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
