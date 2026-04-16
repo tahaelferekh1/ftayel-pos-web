@@ -1,0 +1,9 @@
+{
+  "name": "ftayel-pos-web",
+  "version": "1.0.0",
+  "description": "Fatayel & More POS - Web Version",
+  "scripts": {
+    "build": "echo 'Static site - no build needed'",
+    "start": "echo 'Static site'"
+  }
+}
